@@ -1,0 +1,1332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Analytics Dashboard</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            color: #fff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            padding: 30px 0;
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            font-size: 3.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradientShift 3s ease infinite;
+            background-size: 300% 300%;
+        }
+        
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .subtitle {
+            font-size: 1.3rem;
+            opacity: 0.9;
+            color: #e0e0e0;
+        }
+        
+        .filters-container {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(25px);
+            border-radius: 25px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .filters-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4);
+            background-size: 200% 100%;
+            animation: shimmer 3s infinite linear;
+        }
+        
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        
+        .filters-title {
+            font-size: 1.5rem;
+            margin-bottom: 25px;
+            font-weight: 600;
+            color: #fff;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .filters-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 25px;
+            align-items: end;
+            justify-content: center;
+        }
+        
+        .filter-group {
+            flex: 1;
+            min-width: 220px;
+            position: relative;
+        }
+        
+        .filter-label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 500;
+            color: #e0e0e0;
+            font-size: 1rem;
+        }
+        
+        .filter-select {
+            width: 100%;
+            padding: 14px 18px;
+            border: none;
+            border-radius: 15px;
+            background: linear-gradient(135deg, #87CEEB, #B0E2FF);
+            color: #2c3e50;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(15px);
+            font-weight: 500;
+        }
+        
+        .filter-select:hover {
+            background: linear-gradient(135deg, #A7D8F0, #C1E3FF);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(135, 206, 235, 0.4);
+        }
+        
+        .filter-select:focus {
+            outline: none;
+            background: linear-gradient(135deg, #B0E2FF, #D4F1FF);
+            box-shadow: 0 0 0 3px rgba(135, 206, 235, 0.5);
+        }
+        
+        .filter-buttons {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .filter-btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 15px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .filter-btn.apply {
+            background: linear-gradient(135deg, #4ecdc4, #44a08d);
+            color: white;
+            box-shadow: 0 6px 20px rgba(78, 205, 196, 0.4);
+        }
+        
+        .filter-btn.apply:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 30px rgba(78, 205, 196, 0.6);
+        }
+        
+        .filter-btn.reset {
+            background: rgba(255, 255, 255, 0.12);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .filter-btn.reset:hover {
+            background: rgba(255, 255, 255, 0.18);
+            transform: translateY(-4px);
+        }
+        
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 25px;
+            margin-bottom: 35px;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(25px);
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #ff6b6b, #4ecdc4, #45b7d1);
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+        }
+        
+        .stat-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            opacity: 0.9;
+        }
+        
+        .stat-value {
+            font-size: 3.2rem;
+            font-weight: bold;
+            margin: 15px 0;
+            background: linear-gradient(45deg, #fff, #f0f8ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .stat-label {
+            font-size: 1.1rem;
+            opacity: 0.8;
+            color: #e0e0e0;
+            font-weight: 500;
+        }
+        
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(25px);
+            border-radius: 25px;
+            padding: 30px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4);
+        }
+        
+        .card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 18px 45px rgba(0, 0, 0, 0.25);
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+        
+        .card-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .chart-container {
+            height: 320px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .chart-toggle {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+        
+        .chart-toggle:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .chart-toggle.active {
+            background: linear-gradient(135deg, #4ecdc4, #44a08d);
+        }
+        
+        .data-table-container {
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+            border-radius: 15px;
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            overflow: hidden;
+        }
+        
+        .data-table th {
+            background: linear-gradient(135deg, #4ecdc4, #44a08d);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 1rem;
+            position: sticky;
+            top: 0;
+        }
+        
+        .data-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            color: #e0e0e0;
+            font-size: 0.95rem;
+        }
+        
+        .data-table tr:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .timestamp-cell {
+            font-family: 'Courier New', monospace;
+            color: #4ecdc4;
+            font-weight: 500;
+        }
+        
+        .value-cell {
+            text-align: center;
+            font-weight: 600;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 40px;
+            margin-top: 60px;
+            font-size: 1rem;
+            opacity: 0.8;
+            color: #e0e0e0;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 1.3rem;
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .no-data {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+            font-style: italic;
+            padding: 50px;
+        }
+        
+        .error-message {
+            background: linear-gradient(135deg, rgba(231, 76, 60, 0.3), rgba(192, 57, 43, 0.3));
+            border: 1px solid rgba(231, 76, 60, 0.5);
+            border-radius: 18px;
+            padding: 25px;
+            margin: 25px 0;
+            text-align: center;
+            backdrop-filter: blur(15px);
+        }
+        
+        .success-message {
+            background: linear-gradient(135deg, rgba(46, 204, 113, 0.3), rgba(39, 174, 96, 0.3));
+            border: 1px solid rgba(46, 204, 113, 0.5);
+            border-radius: 18px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+            backdrop-filter: blur(15px);
+        }
+        
+        @media (max-width: 768px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .filters-row {
+                flex-direction: column;
+            }
+            
+            .filter-group {
+                min-width: 100%;
+            }
+            
+            h1 {
+                font-size: 2.5rem;
+            }
+            
+            .data-table-container {
+                overflow-x: auto;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>🌤️ Weather Analytics Dashboard</h1>
+            <p class="subtitle">Comprehensive weather insights with multiple visualization types</p>
+        </header>
+        
+        <div id="statusMessage"></div>
+        
+        <!-- Filters Section -->
+        <div class="filters-container">
+            <div class="filters-title">🔍 Filter Data</div>
+            <div class="filters-row">
+                <div class="filter-group">
+                    <label class="filter-label">📍 State</label>
+                    <select id="stateSelect" class="filter-select" onchange="onStateChange()">
+                        <option value="all">All States</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label class="filter-label">🏢 Location</label>
+                    <select id="locnoSelect" class="filter-select" onchange="onLocnoChange()">
+                        <option value="all">All Locations</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label class="filter-label">🏭 Plant</label>
+                    <select id="plantnoSelect" class="filter-select">
+                        <option value="all">All Plants</option>
+                    </select>
+                </div>
+                
+                <div class="filter-buttons">
+                    <button class="filter-btn apply" onclick="loadData()">Apply Filters</button>
+                    <button class="filter-btn reset" onclick="resetFilters()">Reset All</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Stats Section -->
+        <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-icon">📊</div>
+                <div class="stat-value" id="totalRecords">--</div>
+                <div class="stat-label">Total Records</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📍</div>
+                <div class="stat-value" id="uniqueLocations">--</div>
+                <div class="stat-label">Unique Locations</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🔄</div>
+                <div class="stat-value" id="todayUpdates">--</div>
+                <div class="stat-label">Today's Updates</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">⏰</div>
+                <div class="stat-value" id="lastUpdate">--:--</div>
+                <div class="stat-label">Last Updated</div>
+            </div>
+        </div>
+        
+        <!-- Charts Section -->
+        <div class="charts-grid">
+            <!-- Line Charts -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">📈 Temperature Trend</div>
+                    <div class="chart-toggle-group">
+                        <button class="chart-toggle active" onclick="toggleChartType('tempLineChart', 'zigzag')">Zigzag</button>
+                        <button class="chart-toggle" onclick="toggleChartType('tempLineChart', 'smooth')">Smooth</button>
+                        <button class="chart-toggle" onclick="toggleChartType('tempLineChart', 'linear')">Linear</button>
+                    </div>
+                </div>
+                <div class="chart-container" id="tempLineChart">
+                    <div class="loading">Loading temperature trend...</div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">💨 Wind Speed Trend</div>
+                    <div class="chart-toggle-group">
+                        <button class="chart-toggle active" onclick="toggleChartType('windLineChart', 'zigzag')">Zigzag</button>
+                        <button class="chart-toggle" onclick="toggleChartType('windLineChart', 'smooth')">Smooth</button>
+                        <button class="chart-toggle" onclick="toggleChartType('windLineChart', 'linear')">Linear</button>
+                    </div>
+                </div>
+                <div class="chart-container" id="windLineChart">
+                    <div class="loading">Loading wind speed trend...</div>
+                </div>
+            </div>
+            
+            <!-- Pie Charts -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">🥧 Temperature Distribution by State</div>
+                </div>
+                <div class="chart-container" id="tempPieChart">
+                    <div class="loading">Loading temperature distribution...</div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">🥧 Conditions Distribution</div>
+                </div>
+                <div class="chart-container" id="conditionsPieChart">
+                    <div class="loading">Loading conditions distribution...</div>
+                </div>
+            </div>
+            
+            <!-- Bubble Charts -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">🫧 Weather Parameters Bubble Chart</div>
+                </div>
+                <div class="chart-container" id="weatherBubbleChart">
+                    <div class="loading">Loading bubble chart...</div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">📊 Humidity vs Temperature</div>
+                </div>
+                <div class="chart-container" id="humidityTempChart">
+                    <div class="loading">Loading humidity vs temperature...</div>
+                </div>
+            </div>
+            
+            <!-- Additional Charts -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">💧 Humidity Trend</div>
+                    <div class="chart-toggle-group">
+                        <button class="chart-toggle active" onclick="toggleChartType('humidityLineChart', 'zigzag')">Zigzag</button>
+                        <button class="chart-toggle" onclick="toggleChartType('humidityLineChart', 'smooth')">Smooth</button>
+                        <button class="chart-toggle" onclick="toggleChartType('humidityLineChart', 'linear')">Linear</button>
+                    </div>
+                </div>
+                <div class="chart-container" id="humidityLineChart">
+                    <div class="loading">Loading humidity trend...</div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">🌧️ Precipitation Analysis</div>
+                </div>
+                <div class="chart-container" id="precipBarChart">
+                    <div class="loading">Loading precipitation analysis...</div>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>Weather Analytics Dashboard &copy; 2025 | Multiple visualization types | Real-time updates</p>
+        </footer>
+    </div>
+
+    <script>
+        // API Configuration
+        const API_KEY = 'dca84481ac33e0245a1aafe304fab79a';
+        const WEATHER_API_URL = 'https://api.openweathermap.org/data/2.5';
+        
+        // Global state
+        let currentData = [];
+        let chartSummary = {};
+        let chartTypes = {
+            tempLineChart: 'zigzag',
+            windLineChart: 'zigzag',
+            humidityLineChart: 'zigzag'
+        };
+
+        // Show status message
+        function showStatus(message, type = 'info') {
+            const div = document.getElementById('statusMessage');
+            div.innerHTML = `<div class="${type === 'error' ? 'error-message' : 'success-message'}">${message}</div>`;
+            if (type !== 'error') setTimeout(() => div.innerHTML = '', 4000);
+        }
+        
+        // Toggle chart type
+        function toggleChartType(chartId, type) {
+            // Update active button state
+            const buttons = document.querySelectorAll(`[onclick*="${chartId}"]`);
+            buttons.forEach(btn => {
+                if (btn.textContent.toLowerCase() === type) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+            
+            // Update chart type
+            chartTypes[chartId] = type;
+            
+            // Redraw the chart if data is available
+            if (currentData.length > 0) {
+                updateLineChart(chartId);
+            }
+        }
+        
+        // Load dropdown options from database
+        async function loadDropdownOptions(state = null, locno = null) {
+            try {
+                let url = '/get_dropdown_options';
+                const params = new URLSearchParams();
+                
+                if (state && state !== 'all') params.append('state', state);
+                if (locno && locno !== 'all') params.append('locno', locno);
+                
+                if (params.toString()) url += '?' + params.toString();
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    return data.data;
+                } else {
+                    throw new Error(data.message);
+                }
+            } catch (error) {
+                console.error('Error loading dropdown options:', error);
+                throw error;
+            }
+        }
+        
+        // Populate dropdowns from database
+        async function populateDropdowns(state = null, locno = null) {
+            try {
+                const dropdownData = await loadDropdownOptions(state, locno);
+                
+                // Populate state dropdown
+                const stateSelect = document.getElementById('stateSelect');
+                const currentState = stateSelect.value;
+                stateSelect.innerHTML = '<option value="all">All States</option>';
+                dropdownData.states.forEach(state => {
+                    const option = new Option(state, state);
+                    stateSelect.add(option);
+                });
+                if (currentState && currentState !== 'all') {
+                    stateSelect.value = currentState;
+                }
+                
+                // Populate locno dropdown
+                const locnoSelect = document.getElementById('locnoSelect');
+                const currentLocno = locnoSelect.value;
+                locnoSelect.innerHTML = '<option value="all">All Locations</option>';
+                dropdownData.locnos.forEach(locno => {
+                    const option = new Option(locno, locno);
+                    locnoSelect.add(option);
+                });
+                if (currentLocno && currentLocno !== 'all') {
+                    locnoSelect.value = currentLocno;
+                }
+                
+                // Populate plantno dropdown
+                const plantnoSelect = document.getElementById('plantnoSelect');
+                const currentPlantno = plantnoSelect.value;
+                plantnoSelect.innerHTML = '<option value="all">All Plants</option>';
+                dropdownData.plantnos.forEach(plant => {
+                    const option = new Option(plant, plant);
+                    plantnoSelect.add(option);
+                });
+                if (currentPlantno && currentPlantno !== 'all') {
+                    plantnoSelect.value = currentPlantno;
+                }
+                
+            } catch (error) {
+                console.error('Error populating dropdowns:', error);
+                showStatus('❌ Error loading filter options', 'error');
+            }
+        }
+        
+        // Handle state change
+        async function onStateChange() {
+            const stateSelect = document.getElementById('stateSelect');
+            const selectedState = stateSelect.value;
+            
+            // Reset dependent dropdowns
+            document.getElementById('locnoSelect').innerHTML = '<option value="all">All Locations</option>';
+            document.getElementById('plantnoSelect').innerHTML = '<option value="all">All Plants</option>';
+            
+            // Load locnos for selected state
+            if (selectedState !== 'all') {
+                showStatus('🔄 Loading locations for selected state...', 'info');
+                await populateDropdowns(selectedState, null);
+                showStatus('✅ Locations loaded successfully', 'success');
+            } else {
+                // If "All States" selected, reload all dropdowns
+                await populateDropdowns();
+            }
+        }
+        
+        // Handle locno change
+        async function onLocnoChange() {
+            const locnoSelect = document.getElementById('locnoSelect');
+            const selectedLocno = locnoSelect.value;
+            const stateSelect = document.getElementById('stateSelect');
+            const selectedState = stateSelect.value;
+            
+            // Reset plantno dropdown
+            document.getElementById('plantnoSelect').innerHTML = '<option value="all">All Plants</option>';
+            
+            // Load plantnos for selected state and locno
+            if (selectedLocno !== 'all' && selectedState !== 'all') {
+                showStatus('🔄 Loading plants for selected location...', 'info');
+                await populateDropdowns(selectedState, selectedLocno);
+                showStatus('✅ Plants loaded successfully', 'success');
+            }
+        }
+        
+        // Fetch weather data from OpenWeatherMap API for specific coordinates
+        async function fetchWeatherData(lat, lon) {
+            try {
+                const response = await fetch(
+                    `${WEATHER_API_URL}/weather?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}`
+                );
+                
+                if (!response.ok) {
+                    throw new Error('Failed to fetch weather data');
+                }
+                
+                const data = await response.json();
+                return {
+                    temp: Math.round(data.main.temp),
+                    humidity: data.main.humidity,
+                    windSpeed: data.wind.speed,
+                    conditions: data.weather[0].description,
+                    pressure: data.main.pressure,
+                    feels_like: Math.round(data.main.feels_like)
+                };
+            } catch (error) {
+                console.error('Error fetching weather data:', error);
+                return null;
+            }
+        }
+        
+        // Load data from database with current filters
+        async function loadData() {
+            try {
+                const state = document.getElementById('stateSelect').value;
+                const locno = document.getElementById('locnoSelect').value;
+                const plantno = document.getElementById('plantnoSelect').value;
+                
+                showStatus('🔄 Loading data from database...', 'info');
+                
+                const params = new URLSearchParams();
+                if (state !== 'all') params.append('state', state);
+                if (locno !== 'all') params.append('locno', locno);
+                if (plantno !== 'all') params.append('plantno', plantno);
+                
+                const response = await fetch('/get_data?' + params);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    // Fetch current weather conditions for each location from API
+                    showStatus('🔄 Fetching current weather conditions...', 'info');
+                    
+                    const enhancedData = [];
+                    for (const item of data.data) {
+                        if (item.latitude && item.longitude) {
+                            const weatherData = await fetchWeatherData(item.latitude, item.longitude);
+                            if (weatherData) {
+                                enhancedData.push({
+                                    ...item,
+                                    CurrentTemp: weatherData.temp,
+                                    CurrentHumidity: weatherData.humidity,
+                                    CurrentWindSpeed: weatherData.windSpeed,
+                                    CurrentConditions: weatherData.conditions,
+                                    CurrentPressure: weatherData.pressure,
+                                    CurrentFeelsLike: weatherData.feels_like,
+                                    LastUpdated: new Date().toISOString()
+                                });
+                            } else {
+                                enhancedData.push(item);
+                            }
+                        } else {
+                            enhancedData.push(item);
+                        }
+                    }
+                    
+                    currentData = enhancedData;
+                    chartSummary = data.chart_summary || {};
+                    updateStats(data.stats);
+                    updateAllCharts();
+                    showStatus(`✅ Loaded ${data.data.length} records with current weather conditions`, 'success');
+                } else {
+                    throw new Error(data.message);
+                }
+            } catch (error) {
+                showStatus('❌ Error loading data: ' + error.message, 'error');
+                showNoDataMessage();
+            }
+        }
+        
+        // Reset filters
+        async function resetFilters() {
+            document.getElementById('stateSelect').value = 'all';
+            document.getElementById('locnoSelect').value = 'all';
+            document.getElementById('plantnoSelect').value = 'all';
+            await populateDropdowns();
+            loadData();
+        }
+        
+        // Show no data message
+        function showNoDataMessage() {
+            document.querySelectorAll('.loading').forEach(container => {
+                container.className = 'no-data';
+                container.textContent = 'No data available for selected filters';
+            });
+            
+            document.getElementById('totalRecords').textContent = '0';
+            document.getElementById('uniqueLocations').textContent = '0';
+            document.getElementById('todayUpdates').textContent = '0';
+            document.getElementById('lastUpdate').textContent = 'No data';
+        }
+        
+        // Update statistics
+        function updateStats(stats) {
+            document.getElementById('totalRecords').textContent = stats.total_records || currentData.length;
+            document.getElementById('uniqueLocations').textContent = stats.unique_locations || new Set(currentData.map(d => d.LOCNO)).size;
+            document.getElementById('todayUpdates').textContent = stats.today_count || currentData.filter(d => {
+                const date = new Date(d.CreatedOn || d.LastUpdated);
+                const today = new Date();
+                return date.toDateString() === today.toDateString();
+            }).length;
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+        }
+        
+        // Create zigzag line effect
+        function createZigZagLine(x, y) {
+            const newX = [];
+            const newY = [];
+            
+            for (let i = 0; i < x.length - 1; i++) {
+                newX.push(x[i]);
+                newY.push(y[i]);
+                
+                if (i < x.length - 1) {
+                    const midX = (parseFloat(x[i]) + parseFloat(x[i + 1])) / 2;
+                    const midY = (parseFloat(y[i]) + parseFloat(y[i + 1])) / 2;
+                    const variation = (Math.random() - 0.5) * (Math.abs(y[i] - y[i + 1]) * 0.3);
+                    
+                    newX.push(midX);
+                    newY.push(midY + variation);
+                }
+            }
+            
+            if (x.length > 0) {
+                newX.push(x[x.length - 1]);
+                newY.push(y[y.length - 1]);
+            }
+            
+            return { x: newX, y: newY };
+        }
+        
+        // Update individual line chart based on selected type
+        function updateLineChart(chartId) {
+            if (currentData.length === 0) return;
+            
+            const times = currentData.map(d => {
+                const date = new Date(d.CreatedOn || d.LastUpdated);
+                return date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            });
+            
+            let data, yValues, title, color, yTitle;
+            
+            switch(chartId) {
+                case 'tempLineChart':
+                    // Use current temperature from API if available, otherwise use historical data
+                    yValues = currentData.map(d => d.CurrentTemp || d.Temp || 0);
+                    title = 'Temperature Trend Over Time';
+                    color = '#ff6b6b';
+                    yTitle = 'Temperature (°C)';
+                    break;
+                case 'windLineChart':
+                    yValues = currentData.map(d => d.CurrentWindSpeed || d.WindSpeed || 0);
+                    title = 'Wind Speed Trend Over Time';
+                    color = '#4ecdc4';
+                    yTitle = 'Wind Speed (m/s)';
+                    break;
+                case 'humidityLineChart':
+                    yValues = currentData.map(d => d.CurrentHumidity || d.Humidity || 0);
+                    title = 'Humidity Trend Over Time';
+                    color = '#45b7d1';
+                    yTitle = 'Humidity (%)';
+                    break;
+                default:
+                    return;
+            }
+            
+            const chartType = chartTypes[chartId];
+            let trace;
+            
+            switch(chartType) {
+                case 'zigzag':
+                    const zigzagData = createZigZagLine(times, yValues);
+                    trace = {
+                        x: zigzagData.x,
+                        y: zigzagData.y,
+                        type: 'scatter',
+                        mode: 'lines',
+                        name: title.split(' ')[0],
+                        line: { 
+                            color: color,
+                            width: 4,
+                            shape: 'spline',
+                            smoothing: 0.8
+                        },
+                        fill: 'tozeroy',
+                        fillcolor: color.replace(')', ', 0.2)').replace('rgb', 'rgba')
+                    };
+                    break;
+                    
+                case 'smooth':
+                    trace = {
+                        x: times,
+                        y: yValues,
+                        type: 'scatter',
+                        mode: 'lines',
+                        name: title.split(' ')[0],
+                        line: { 
+                            color: color,
+                            width: 4,
+                            shape: 'spline',
+                            smoothing: 1.3
+                        },
+                        fill: 'tozeroy',
+                        fillcolor: color.replace(')', ', 0.2)').replace('rgb', 'rgba')
+                    };
+                    break;
+                    
+                case 'linear':
+                default:
+                    trace = {
+                        x: times,
+                        y: yValues,
+                        type: 'scatter',
+                        mode: 'lines+markers',
+                        name: title.split(' ')[0],
+                        line: { 
+                            color: color,
+                            width: 3
+                        },
+                        marker: {
+                            size: 4,
+                            color: color
+                        }
+                    };
+                    break;
+            }
+            
+            const layout = {
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: '#fff', family: 'Segoe UI' },
+                margin: { t: 40, l: 60, r: 40, b: 60 },
+                xaxis: { 
+                    gridcolor: 'rgba(255,255,255,0.1)',
+                    tickfont: { color: '#e0e0e0' },
+                    showgrid: true
+                },
+                yaxis: { 
+                    gridcolor: 'rgba(255,255,255,0.1)',
+                    tickfont: { color: '#e0e0e0' },
+                    title: yTitle,
+                    showgrid: true
+                },
+                showlegend: true,
+                legend: {
+                    x: 0,
+                    y: 1.1,
+                    orientation: 'h',
+                    font: { color: '#e0e0e0' }
+                },
+                title: title
+            };
+            
+            Plotly.newPlot(chartId, [trace], layout);
+        }
+        
+        // Update all charts
+        function updateAllCharts() {
+            if (currentData.length === 0) {
+                showNoDataMessage();
+                return;
+            }
+            
+            // Remove loading messages
+            document.querySelectorAll('.loading').forEach(el => {
+                if (el.parentElement) el.remove();
+            });
+            
+            // Sort by date
+            currentData.sort((a, b) => new Date(a.CreatedOn || a.LastUpdated) - new Date(b.CreatedOn || b.LastUpdated));
+            
+            const times = currentData.map(d => {
+                const date = new Date(d.CreatedOn || d.LastUpdated);
+                return date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            });
+            
+            // Use current weather data from API when available
+            const temperature = currentData.map(d => d.CurrentTemp || d.Temp || 0);
+            const windSpeed = currentData.map(d => d.CurrentWindSpeed || d.WindSpeed || 0);
+            const humidity = currentData.map(d => d.CurrentHumidity || d.Humidity || 0);
+            const precipitation = currentData.map(d => d.Precip || 0);
+            const currentConditions = currentData.map(d => d.CurrentConditions || d.Conditions || 'Unknown');
+            
+            // Common layout for all charts
+            const layout = {
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: '#fff', family: 'Segoe UI' },
+                margin: { t: 40, l: 60, r: 40, b: 60 },
+                xaxis: { 
+                    gridcolor: 'rgba(255,255,255,0.1)',
+                    tickfont: { color: '#e0e0e0' },
+                    showgrid: true
+                },
+                yaxis: { 
+                    gridcolor: 'rgba(255,255,255,0.1)',
+                    tickfont: { color: '#e0e0e0' },
+                    showgrid: true
+                },
+                showlegend: true,
+                legend: {
+                    x: 0,
+                    y: 1.1,
+                    orientation: 'h',
+                    font: { color: '#e0e0e0' }
+                }
+            };
+            
+            // Update line charts
+            updateLineChart('tempLineChart');
+            updateLineChart('windLineChart');
+            updateLineChart('humidityLineChart');
+            
+            // 3. Temperature Pie Chart by State
+            if (chartSummary.state_data && chartSummary.state_data.length > 0) {
+                const stateData = chartSummary.state_data;
+                const labels = stateData.map(d => d.State || 'Unknown');
+                const values = stateData.map(d => d.avg_temp || 0);
+                
+                Plotly.newPlot('tempPieChart', [{
+                    labels: labels,
+                    values: values,
+                    type: 'pie',
+                    hole: 0.4,
+                    marker: {
+                        colors: ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#a29bfe', '#fd79a8']
+                    },
+                    textinfo: 'label+percent',
+                    textposition: 'outside',
+                    hoverinfo: 'label+value+percent'
+                }], {
+                    ...layout,
+                    title: 'Average Temperature Distribution by State',
+                    showlegend: true
+                });
+            } else {
+                // Fallback: Create state data from current data
+                const stateTempData = {};
+                currentData.forEach(item => {
+                    const state = item.State || 'Unknown';
+                    const temp = item.CurrentTemp || item.Temp || 0;
+                    if (!stateTempData[state]) {
+                        stateTempData[state] = { total: 0, count: 0 };
+                    }
+                    stateTempData[state].total += temp;
+                    stateTempData[state].count += 1;
+                });
+                
+                const labels = Object.keys(stateTempData);
+                const values = labels.map(state => stateTempData[state].total / stateTempData[state].count);
+                
+                if (labels.length > 0) {
+                    Plotly.newPlot('tempPieChart', [{
+                        labels: labels,
+                        values: values,
+                        type: 'pie',
+                        hole: 0.4,
+                        marker: {
+                            colors: ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#a29bfe', '#fd79a8']
+                        },
+                        textinfo: 'label+percent',
+                        textposition: 'outside',
+                        hoverinfo: 'label+value+percent'
+                    }], {
+                        ...layout,
+                        title: 'Average Temperature Distribution by State',
+                        showlegend: true
+                    });
+                }
+            }
+            
+            // 4. Conditions Pie Chart
+            if (chartSummary.conditions_data && chartSummary.conditions_data.length > 0) {
+                const conditionsData = chartSummary.conditions_data;
+                const labels = conditionsData.map(d => d.Conditions || 'Unknown');
+                const values = conditionsData.map(d => d.count);
+                
+                Plotly.newPlot('conditionsPieChart', [{
+                    labels: labels,
+                    values: values,
+                    type: 'pie',
+                    hole: 0.3,
+                    marker: {
+                        colors: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40']
+                    },
+                    textinfo: 'label+percent',
+                    hoverinfo: 'label+value+percent'
+                }], {
+                    ...layout,
+                    title: 'Weather Conditions Distribution',
+                    showlegend: true
+                });
+            } else {
+                // Fallback: Create conditions data from current data
+                const conditionsCount = {};
+                currentConditions.forEach(condition => {
+                    conditionsCount[condition] = (conditionsCount[condition] || 0) + 1;
+                });
+                
+                const labels = Object.keys(conditionsCount);
+                const values = Object.values(conditionsCount);
+                
+                if (labels.length > 0) {
+                    Plotly.newPlot('conditionsPieChart', [{
+                        labels: labels,
+                        values: values,
+                        type: 'pie',
+                        hole: 0.3,
+                        marker: {
+                            colors: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40']
+                        },
+                        textinfo: 'label+percent',
+                        hoverinfo: 'label+value+percent'
+                    }], {
+                        ...layout,
+                        title: 'Weather Conditions Distribution',
+                        showlegend: true
+                    });
+                }
+            }
+            
+            // 5. Weather Parameters Bubble Chart
+            if (chartSummary.bubble_data && chartSummary.bubble_data.length > 0) {
+                const bubbleData = chartSummary.bubble_data;
+                const locations = bubbleData.map(d => d.LOCNO || 'Unknown');
+                const temps = bubbleData.map(d => d.avg_temp || 0);
+                const humidities = bubbleData.map(d => d.avg_humidity || 0);
+                const windSpeeds = bubbleData.map(d => d.avg_windspeed || 0);
+                const sizes = bubbleData.map(d => (d.record_count || 1) * 10);
+                
+                Plotly.newPlot('weatherBubbleChart', [{
+                    x: temps,
+                    y: humidities,
+                    mode: 'markers',
+                    type: 'scatter',
+                    text: locations,
+                    marker: {
+                        size: sizes,
+                        color: windSpeeds,
+                        colorscale: 'Viridis',
+                        showscale: true,
+                        colorbar: {
+                            title: 'Wind Speed'
+                        }
+                    },
+                    hovertemplate: '<b>%{text}</b><br>Temp: %{x}°C<br>Humidity: %{y}%<br>Wind: %{marker.color} m/s<extra></extra>'
+                }], {
+                    ...layout,
+                    title: 'Weather Parameters Bubble Chart',
+                    xaxis: { ...layout.xaxis, title: 'Temperature (°C)' },
+                    yaxis: { ...layout.yaxis, title: 'Humidity (%)' }
+                });
+            } else {
+                // Fallback: Create bubble data from current data
+                const locationData = {};
+                currentData.forEach(item => {
+                    const loc = item.LOCNO || 'Unknown';
+                    if (!locationData[loc]) {
+                        locationData[loc] = {
+                            temps: [],
+                            humidities: [],
+                            windSpeeds: []
+                        };
+                    }
+                    locationData[loc].temps.push(item.CurrentTemp || item.Temp || 0);
+                    locationData[loc].humidities.push(item.CurrentHumidity || item.Humidity || 0);
+                    locationData[loc].windSpeeds.push(item.CurrentWindSpeed || item.WindSpeed || 0);
+                });
+                
+                const locations = Object.keys(locationData);
+                const temps = locations.map(loc => {
+                    const data = locationData[loc].temps;
+                    return data.reduce((a, b) => a + b, 0) / data.length;
+                });
+                const humidities = locations.map(loc => {
+                    const data = locationData[loc].humidities;
+                    return data.reduce((a, b) => a + b, 0) / data.length;
+                });
+                const windSpeeds = locations.map(loc => {
+                    const data = locationData[loc].windSpeeds;
+                    return data.reduce((a, b) => a + b, 0) / data.length;
+                });
+                const sizes = locations.map(loc => locationData[loc].temps.length * 10);
+                
+                if (locations.length > 0) {
+                    Plotly.newPlot('weatherBubbleChart', [{
+                        x: temps,
+                        y: humidities,
+                        mode: 'markers',
+                        type: 'scatter',
+                        text: locations,
+                        marker: {
+                            size: sizes,
+                            color: windSpeeds,
+                            colorscale: 'Viridis',
+                            showscale: true,
+                            colorbar: {
+                                title: 'Wind Speed'
+                            }
+                        },
+                        hovertemplate: '<b>%{text}</b><br>Temp: %{x}°C<br>Humidity: %{y}%<br>Wind: %{marker.color} m/s<extra></extra>'
+                    }], {
+                        ...layout,
+                        title: 'Weather Parameters Bubble Chart',
+                        xaxis: { ...layout.xaxis, title: 'Temperature (°C)' },
+                        yaxis: { ...layout.yaxis, title: 'Humidity (%)' }
+                    });
+                }
+            }
+            
+            // 6. Humidity vs Temperature Scatter Plot
+            Plotly.newPlot('humidityTempChart', [{
+                x: temperature,
+                y: humidity,
+                mode: 'markers',
+                type: 'scatter',
+                name: 'Readings',
+                marker: {
+                    size: 8,
+                    color: temperature,
+                    colorscale: 'Rainbow',
+                    showscale: true,
+                    colorbar: {
+                        title: 'Temp (°C)'
+                    }
+                },
+                hovertemplate: 'Temp: %{x}°C<br>Humidity: %{y}%<extra></extra>'
+            }], {
+                ...layout,
+                title: 'Humidity vs Temperature Correlation',
+                xaxis: { ...layout.xaxis, title: 'Temperature (°C)' },
+                yaxis: { ...layout.yaxis, title: 'Humidity (%)' }
+            });
+            
+            // 8. Precipitation Bar Chart
+            Plotly.newPlot('precipBarChart', [{
+                x: times,
+                y: precipitation,
+                type: 'bar',
+                name: 'Precipitation',
+                marker: { 
+                    color: '#96ceb4',
+                    opacity: 0.8,
+                    line: {
+                        color: '#7bc4a4',
+                        width: 1
+                    }
+                }
+            }], {
+                ...layout,
+                title: 'Precipitation Over Time',
+                yaxis: { ...layout.yaxis, title: 'Precipitation (mm)' }
+            });
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async function() {
+            await populateDropdowns();
+            loadData();
+            setInterval(loadData, 60000); // Refresh every minute
+        });
+    </script>
+</body>
+</html>

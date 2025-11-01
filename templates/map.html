@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Weather Forecast</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        /* ====== YOUR EXISTING CSS (unchanged) ====== */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+               min-height: 100vh; padding: 20px; overflow-x: hidden;
+               background: linear-gradient(to bottom, #1a2980, #26d0ce); color: #333; }
+        #background-animation { position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+               z-index: -1; overflow: hidden; }
+        .cloud { position: absolute; background: rgba(255, 255, 255, 0.8);
+                 border-radius: 50%; box-shadow: 0 0 20px rgba(255, 255, 255, 0.5); }
+        .cloud:before, .cloud:after { content: ''; position: absolute;
+                 background: rgba(255, 255, 255, 0.8); border-radius: 50%; }
+        .cloud-1 { width: 120px; height: 40px; top: 15%; left: 10%; }
+        .cloud-1:before { width: 55px; height: 55px; top: -25px; left: 10px; }
+        .cloud-1:after { width: 45px; height: 45px; top: -20px; left: 40px; }
+        .cloud-2 { width: 180px; height: 50px; top: 25%; right: 10%; }
+        .cloud-2:before { width: 70px; height: 70px; top: -35px; left: 15px; }
+        .cloud-2:after { width: 60px; height: 60px; top: -30px; left: 60px; }
+        .cloud-3 { width: 150px; height: 45px; bottom: 30%; left: 20%; }
+        .cloud-3:before { width: 65px; height: 65px; top: -30px; left: 10px; }
+        .cloud-3:after { width: 50px; height: 50px; top: -25px; left: 50px; }
+        .cloud-4 { width: 200px; height: 60px; bottom: 20%; right: 15%; }
+        .cloud-4:before { width: 80px; height: 80px; top: -40px; left: 20px; }
+        .cloud-4:after { width: 70px; height: 70px; top: -35px; left: 70px; }
+        .dashboard-container { max-width: 1400px; margin: 0 auto; position: relative; z-index: 1; }
+        .dashboard-header { background: rgba(255,255,255,0.85); backdrop-filter: blur(10px);
+            border-radius: 20px; padding: 25px; margin-bottom: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.3);
+            animation: float 6s ease-in-out infinite; }
+        @keyframes float { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-10px);} }
+        .header-content { display: flex; justify-content: space-between;
+            align-items: center; flex-wrap: wrap; gap: 15px; }
+        .header-title h1 { color: #1a2980; font-size: 2.2rem; margin-bottom: 5px;
+            background: linear-gradient(to right, #1a2980, #26d0ce);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .header-title p { color: #5a6ab1; font-size: 1.1rem; }
+        .stats-grid { display: flex; gap: 15px; flex-wrap: wrap; }
+        .stats-card { background: linear-gradient(135deg,#1a2980,#26d0ce);
+            color: white; padding: 15px 20px; border-radius: 12px; text-align: center;
+            min-width: 120px; box-shadow: 0 5px 15px rgba(26,41,128,0.3); }
+        .stats-number { font-size: 1.8rem; font-weight: bold; display: block; }
+        .stats-label { font-size: 0.9rem; opacity: 0.9; }
+        .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+            gap: 25px; margin-bottom: 25px; }
+        .card { background: rgba(255,255,255,0.85); backdrop-filter: blur(10px);
+            border-radius: 20px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,255,255,0.3); transition: transform .3s, box-shadow .3s; }
+        .card:hover { transform: translateY(-8px); box-shadow: 0 15px 35px rgba(0,0,0,0.15); }
+        .card-header { display: flex; align-items: center; margin-bottom: 15px; }
+        .card-icon { font-size: 1.8rem; margin-right: 10px; }
+        .card-title { font-size: 1.4rem; color: #1a2980; font-weight: 600; }
+        .card-content { height: 300px; }
+        .footer { text-align: center; background: rgba(255,255,255,0.85); backdrop-filter: blur(10px);
+            border-radius: 20px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,255,255,0.3); }
+        .last-update { font-size: 1rem; color: #1a2980; margin-bottom: 10px; font-weight: 500; }
+        .update-info { display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .live-indicator { display: flex; align-items: center; gap: 8px; color: #e74c3c; font-weight: bold; }
+        .pulse { width: 12px; height: 12px; background: #e74c3c; border-radius: 50%;
+                 animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%{transform:scale(.95);opacity:.7;}50%{transform:scale(1.1);opacity:1;}100%{transform:scale(.95);opacity:.7;} }
+        @media (max-width: 768px) { .cards-grid{grid-template-columns:1fr;} .header-content{flex-direction:column;text-align:center;}
+            .header-title h1{font-size:1.8rem;} .stats-grid{justify-content:center;} }
+    </style>
+</head>
+<body>
+    <!-- Animated Background -->
+    <div id="background-animation">
+        <div class="cloud cloud-1"></div>
+        <div class="cloud cloud-2"></div>
+        <div class="cloud cloud-3"></div>
+        <div class="cloud cloud-4"></div>
+    </div>
+
+    <!-- Dashboard -->
+    <div class="dashboard-container">
+        <!-- Header -->
+        <div class="dashboard-header">
+            <div class="header-content">
+                <div class="header-title">
+                    <h1>🌤 Live Weather Forecast Dashboard</h1>
+                    <p>Real-time weather data visualization with animated cloud simulation</p>
+                </div>
+                <div class="stats-grid">
+                    <div class="stats-card">
+                        <span class="stats-number" id="dataCount">--</span>
+                        <span class="stats-label">Data Points</span>
+                    </div>
+                    <div class="stats-card">
+                        <span class="stats-number" id="citiesCount">--</span>
+                        <span class="stats-label">Cities</span>
+                    </div>
+                    <div class="stats-card">
+                        <span class="stats-number" id="updateCount">--</span>
+                        <span class="stats-label">Updates Today</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Graph Cards -->
+        <div class="cards-grid">
+            <div class="card"><div class="card-header"><div class="card-icon">💨</div><h2 class="card-title">Wind Speed</h2></div><div class="card-content" id="wind_speed"></div></div>
+            <div class="card"><div class="card-header"><div class="card-icon">🌪️</div><h2 class="card-title">Wind Gust</h2></div><div class="card-content" id="wind_gust"></div></div>
+            <div class="card"><div class="card-header"><div class="card-icon">🌡️</div><h2 class="card-title">Temperature</h2></div><div class="card-content" id="temperature"></div></div>
+            <div class="card"><div class="card-header"><div class="card-icon">💧</div><h2 class="card-title">Humidity</h2></div><div class="card-content" id="humidity"></div></div>
+            <div class="card"><div class="card-header"><div class="card-icon">🌧️</div><h2 class="card-title">Precipitation</h2></div><div class="card-content" id="precipitation"></div></div>
+            <div class="card"><div class="card-header"><div class="card-icon">🌈</div><h2 class="card-title">Weather Conditions</h2></div><div class="card-content" id="conditions"></div></div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <div class="last-update">Last updated: <span id="lastUpdateTime">Loading...</span></div>
+            <div class="update-info"><div class="live-indicator"><div class="pulse"></div><span>LIVE - Auto-updating every 60 seconds</span></div></div>
+        </div>
+    </div>
+
+    <!-- === JavaScript to Read Database Data via Flask === -->
+    <script>
+        async function loadWeatherData() {
+            try {
+                const response = await fetch('/get_data');
+                const json = await response.json();
+
+                if (json.status !== 'success' || !json.data) {
+                    console.error('No data found in database.');
+                    return;
+                }
+
+                const records = json.data;
+                document.getElementById('dataCount').innerText = records.length;
+
+                // Unique city count (if City field exists)
+                const uniqueCities = new Set(records.map(r => r.City || r.LOCNO || r.State)).size;
+                document.getElementById('citiesCount').innerText = uniqueCities;
+
+                // Update count today
+                const today = new Date().toISOString().split('T')[0];
+                const todayCount = records.filter(r => r.ForecastDate.startsWith(today)).length;
+                document.getElementById('updateCount').innerText = todayCount;
+
+                // Extract arrays
+                const x = records.map(r => r.ForecastDate);
+                const windSpeed = records.map(r => r.WindSpeed);
+                const windGust = records.map(r => r.WindGust);
+                const temp = records.map(r => r.Temp);
+                const humidity = records.map(r => r.Humidity);
+                const precip = records.map(r => r.Precip);
+                const cond = records.map(r => r.Conditions);
+
+                // === Wind Speed ===
+                Plotly.newPlot('wind_speed', [{ x, y: windSpeed, type: 'scatter', mode: 'lines+markers', line:{color:'#1a2980',width:3}, marker:{size:6} }], {margin:{t:0},paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',xaxis:{title:'Time'},yaxis:{title:'Speed (km/h)'}});
+
+                // === Wind Gust ===
+                Plotly.newPlot('wind_gust', [{ x, y: windGust, type: 'scatter', mode: 'lines+markers', line:{color:'#ff9f43',width:3}, marker:{size:6} }], {margin:{t:0},paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',xaxis:{title:'Time'},yaxis:{title:'Gust (km/h)'}});
+
+                // === Temperature ===
+                Plotly.newPlot('temperature', [{ x, y: temp, type: 'scatter', mode: 'lines+markers', line:{color:'#e74c3c',width:3}, marker:{size:6} }], {margin:{t:0},paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',xaxis:{title:'Time'},yaxis:{title:'Temp (°C)'}});
+
+                // === Humidity ===
+                Plotly.newPlot('humidity', [{ x, y: humidity, type: 'scatter', mode: 'lines+markers', line:{color:'#3498db',width:3}, marker:{size:6} }], {margin:{t:0},paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',xaxis:{title:'Time'},yaxis:{title:'Humidity (%)'}});
+
+                // === Precipitation ===
+                Plotly.newPlot('precipitation', [{ x, y: precip, type: 'bar', marker:{color:'#9b59b6'} }], {margin:{t:0},paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',xaxis:{title:'Time'},yaxis:{title:'Precip (mm)'}});
+
+                // === Conditions ===
+                Plotly.newPlot('conditions', [{ x, y: cond, type: 'scatter', mode: 'markers', marker:{color:'#2ecc71',size:8} }], {margin:{t:0},paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',xaxis:{title:'Time'},yaxis:{title:'Conditions'}});
+
+                // Timestamp update
+                document.getElementById('lastUpdateTime').innerText = new Date().toLocaleString();
+
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            }
+        }
+
+        // Load initially and every 60 sec
+        document.addEventListener('DOMContentLoaded', () => {
+            loadWeatherData();
+            setInterval(loadWeatherData, 60000);
+        });
+    </script>
+</body>
+</html>
